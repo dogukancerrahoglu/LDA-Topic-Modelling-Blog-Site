@@ -1,0 +1,30 @@
+{% extends "layout.html"%}
+
+{% block body %}
+
+{% if article %}
+    <div class = "row">
+        <div class = "col-sm-6">
+            <h3 class = "pull-left"> Başlık : {{article.title}} </h4>
+        </div>
+        <div class = "col-sm-6 text-right">
+            <small class = "pull-right"> Yazar : {{article.author}} </small> 
+            <small class = "pull-right"> Tarih : {{article.created_date}} </small>  
+        </div> 
+    </div>
+    <hr>
+    <h5> İçerik : </h4>
+    <p> {{article.content|safe}} </p>
+
+    
+{% else %}
+    <div class = "alert alert-danger">Böyle bir makale bulunmuyor.</div>
+{% endif %}
+
+<div class = "mr-auto float-right">
+    {% if session["username"] == article.author %}
+        <a href="/edit/{{article.id}}" class = "btn btn-success">Güncelle</a>
+    {% endif %}
+    <a href="/articles" class="btn btn-secondary">Geri dön</a>
+</div>
+{% endblock body %}
