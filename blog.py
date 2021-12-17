@@ -1,13 +1,25 @@
 from flask import Flask, render_template, flash, redirect, url_for, session, logging, request
+from flask_restful import Resource, Api
 from flask_mysqldb import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
 from passlib.hash import sha256_crypt
 from functools import wraps
 from forms import RegisterForm, LoginForm, ArticleForm
+import apis
+import os
+from werkzeug.utils import secure_filename
 
-#Session başlatmak için gerekli secret_key
+#Dosya yükleme için kabul edilen uzantılar ve path
+UPLOAD_FOLDER = "./uploads/"
+ALLOWED_EXTENSIONS = {'txt', }
+
 app = Flask(__name__)
-app.secret_key = "blog"
+app.secret_key = "blog" #Session başlatmak için gerekli secret key
+app.config['JSON_AS_ASCII'] = False #JSON formatı için UTF-8 encoding ayarlaması
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER #Dosya yükleme için path ataması
+
+#Api sınıfından api nesnesi oluşturma
+api = Api(app)
 
 #SQL Bağlantıları
 app.config["MYSQL_HOST"] = "localhost"
@@ -28,10 +40,20 @@ def login_required(page):
             return redirect(url_for("login"))
     return decorated_function
 
+#Geçerli dosya isimlerini kontrol eden fonksiyon
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 #Anasayfa
 @app.route("/")
 def index():
-    return render_template("index.html")
+        return render_template("index.html")
+
+#örnek
+api.add_resource(apis.HelloWorld, '/hello')
+
+#API
+api.add_resource(apis.lda_api, '/lda/<id>')
 
 #Hakkımda
 @app.route("/about")
@@ -135,6 +157,7 @@ def article(id):
 @login_required
 def add_article():
     form = ArticleForm(request.form)
+
     if (request.method == "POST" and form.validate()):
         title = form.title.data
         content = form.content.data
@@ -146,6 +169,38 @@ def add_article():
         cursor.close()
         flash("Makale başarıyla eklendi","success")
         return redirect(url_for("dashboard"))
+
+    if (request.method == "POST"):
+
+        if (not form.validate()):
+            flash("Lütfen başlığı ve içeriği girdiğinizden emin olunuz","warning")
+            return redirect(request.url)
+        
+        #Post request'in file kısmı kontrolü
+        if 'file' not in request.files:
+            flash("Dosya yüklenirken bir hata oluştu", "danger")
+            return redirect(request.url)
+        file = request.files['file']
+        #Eğer kullanıcı bir dosya seçmezse, tarayıcı isimsiz boş bir dosya gönderir
+        if file.filename == '':
+            flash("Seçilmiş bir dosya bulunmamakta","warning")
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+
+            form.title.data = file.filename
+            form.content.data = file.read()
+
+            title = form.title.data
+            content = form.content.data
+
+            cursor = mysql.connection.cursor()
+            query = "insert into articles(title, author, content) values(%s, %s, %s)"
+            cursor.execute(query, (title, session["username"], content))
+            mysql.connection.commit()
+            cursor.close()
+            flash("Makale başarıyla eklendi","success")
+            return redirect(url_for("dashboard"))
     return render_template("addarticle.html", form = form)
 
 #Makale silme
@@ -209,7 +264,7 @@ def search():
         result = cursor.execute(query)
 
         if(result == 0):
-            flash("Aranan kelimeye uygun makale bulunamadı", "alert")
+            flash("Aranan kelimeye uygun makale bulunamadı", "warning")
             return redirect(url_for("articles"))
         else:
             articles = cursor.fetchall()

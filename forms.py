@@ -18,5 +18,5 @@ class LoginForm(Form):
 
 #Makale formu
 class ArticleForm(Form):
-    title = StringField("Makale başlığı", validators = [validators.length(min = 5, max = 100)])
-    content = TextAreaField("Makale içeriği", validators = [validators.length(min = 10)])
+    title = StringField("Metin başlığı", validators = [validators.length(min = 5, max = 100)])
+    content = TextAreaField("Metin içeriği", validators = [validators.length(min = 10)])

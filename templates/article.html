@@ -22,8 +22,9 @@
 {% endif %}
 
 <div class = "mr-auto float-right">
+    <a href="/lda/{{article.id}}" class = "btn btn-success">Modelle</a>
     {% if session["username"] == article.author %}
-        <a href="/edit/{{article.id}}" class = "btn btn-success">Güncelle</a>
+    <a href="/edit/{{article.id}}" class = "btn btn-success">Düzenle</a>
     {% endif %}
     <a href="/articles" class="btn btn-secondary">Geri dön</a>
 </div>
